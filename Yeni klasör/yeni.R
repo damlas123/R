@@ -9,3 +9,17 @@ l<-list('a'=c(13,45,78,94),'b'=c(54,96,32,76),'c'=c(11,22,33,44))
 lapply(l,FUN=mean)
 lapply(l,FUN=sd)
 lapply(l,FUN=var)
+
+
+df$id
+df["id"]
+
+attach(l)
+attach(iris)
+detach(iris)
+mean(Sepal.Length)
+
+with(iris,print(Sepal.Length))
+with(iris,{x<-mean(Sepal.Length,na.rm=T)
+     y<-5
+     print(y)})
