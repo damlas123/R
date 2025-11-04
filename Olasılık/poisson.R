@@ -1,0 +1,15 @@
+#1 saatte 15 tane araba ge??iyor
+#bu k??pr??den 1 saatte 20 araba ge??me olas??l??????
+dpois(x=20,lambda = 15)
+#bu k??pr??den 1 saatte 5 araba ge??me olas??l??????
+dpois(x=5,lambda=15)
+
+
+ppois(q=2,lambda=1/3,lower.tail=FALSE)
+
+
+ppois(q=2,lambda=1/3,lower.tail=TRUE)
+ppois(q=30,lambda=20,lower.tail = FALSE)
+
+#olas??l??k de??erine g??re x de??eri elde etme
+qpois(p=0.6,lambda=15,lower.tail=TRUE)
