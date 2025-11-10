@@ -1,0 +1,126 @@
+---
+title: "Spotify Songs Popularity Prediction"
+output: html_notebook
+---
+
+
+I aim to use regression to determine which values influence the popularity of songs listened to on Spotify. First, I would like to discuss my dataset. 
+
+```{r}
+data<-read.csv("C:\\Users\\damla\\OneDrive\\Belgeler\\GitHub\\R\\PROJE\\REGRESSION\\songs_normalize.csv")
+View(data)
+names(data)
+
+```
+I imported the dataset using the read.csv() function and stored it in the variable data. I did this so I could use the yield.After that , names(data) showed us column of the data.Then, I listed all column names using names(data). From here, we will determine our dependent and independent variables. My goal is to find out what factors influence popularity, so my dependent variable is popularity, and I can treat the other variables as independent.
+
+
+```{r}
+df<-data[-c(1,2,4,5,9,18)]
+names(df)
+```
+
+At this point, I selected the variables to include in my model.I created a new data frame by removing the column numbers of the variables I didn't want using in model.Now, I want to find the relationship between my variables.However, only numerical values should be used with the cor() function, otherwise it will return an error.
+
+```{r}
+numeric_df <- df[sapply(df, is.numeric)]
+df_cor<-cor(numeric_df)
+df_cor
+```
+If the result is positive, there is an effect in the same direction. But if it is negative, there is an effect in the opposite direction. That is, when one increases, the other decreases.
+```{r}
+heatmap(df_cor)
+```
+
+
+The correlation values obtained with cor() were visualized using heatmap().Red indicates the strongest correlations, while lighter colors show weaker relationships. A change in one causes a change in the other. Light colors symbolize weak positive or weak negative. Strong negative is represented by purple or blue colors, but there is no such relationship in our graph.Now , We will see the relationship between popularity and other variables. We can't use heatmap() because for using heatmap() , we have to have at least 2x2 matrix. That's why we will use barplot.
+
+
+```{r}
+pop_cor<-cor(numeric_df)[,"popularity"]
+barplot(pop_cor)
+```
+Since we want the bar chart showing the relationship between popularity and the others, we first need to select popularity and assign its correlation to a variable. We did this in the first line; in the second line, we draw the bar chart.Now, it is time to create a model.
+
+```{r}
+model<-lm(popularity ~ duration_ms + danceability+energy+
+            loudness+mode+speechiness+acousticness+instrumentalness,data=numeric_df)
+```
+We created our first model.
+
+```{r}
+summary(model)
+```
+We can access all information about our model using the summary function. Residuals are the difference between the observed value and the value predicted by the model. Coefficients are the coefficients found in the linear regression equation. They determine the relationship. Multiple R-squared is a statistic that shows how much of the variance in the dependent variable is explained by the independent variables in the model. Our value being very low indicates that our model is poor. However, we had already observed with the cor() function that the relationship between popularity and the other variables was very low.Now , it is time to see plots.
+
+```{r}
+plot(model)
+```
+
+Residuals vs Fitted
+
+Shows if residuals are randomly distributed.
+A random scatter means the model fits well.
+
+Normal Q-Q
+
+Checks if residuals follow a normal distribution.
+Points close to the red line indicate normality.
+
+Scale-Location
+
+Tests if variance of residuals is constant.
+A flat red line means equal variance — a good sign.
+
+Residuals vs Leverage
+
+Detects influential or outlier points.
+Points outside red lines may strongly affect the model.
+
+It's time to split the data. Typically, 80% of the data is used for training and 20% for testing. There's no particular reason for this.But before creating random data, we should use set.seed(). That will protect first random data.
+
+
+```{r}
+set.seed(6)
+traindIndex<-sample(1:nrow(numeric_df),size=0.8*nrow(numeric_df))
+traindata<-numeric_df[traindIndex,]
+testdata<-numeric_df[-traindIndex,]
+
+```
+We have created our train and test data. 
+
+
+
+```{r}
+library(outliers)
+score<-scores(traindata,type="z",prob=0.95)
+anytrue<-apply(score,1,FUN=function(x){any(x)})
+index<-which(anytrue)
+traindata_Removed<-traindata[-index,]
+names(traindata_Removed)
+model2<-lm(popularity ~ .,data=traindata_Removed)
+model1pred<-predict(model,testdata)
+model2pred<-predict(model2,testdata)
+
+library(caret)
+
+R2(model2pred,testdata$popularity)
+R2(model1pred,testdata$popularity)
+
+RMSE(model2pred,testdata$popularity)
+RMSE(model1pred,testdata$popularity)
+
+MAE(model2pred,testdata$popularity)
+MAE(model1pred,testdata$popularity)
+
+library(car)
+vif(model2)
+vif(model)
+```
+
+I have now created the test and training data. We will create a new model from these. But first, let's find the outliers in our data using the score function. If an outlier is detected, it is assigned true; otherwise, it is assigned false. We take the index of these true values with which and then remove them from our dataset. Then we create a model with this new dataset. RMSE stands for Root Mean Square Error, and lower is better.MAE stands for Mean Absolute Error, and lower is better. R² stands for Model Explanation Power, and closer to 1 is better. Based on all these results, we can say that the model we created after removing the outliers is a more accurate model. We also find the variance inflation factor using the vif function. If the variance score of these variables is greater than 10, it is a variance inflation factor.
+
+
+
+In conclusion, the model shows that the relationships between popularity and other variables are weak.
+Still, since the R² value remains low, we can infer that song popularity depends on other external factors beyond the given dataset, such as marketing or artist recognition.
