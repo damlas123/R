@@ -61,6 +61,22 @@ modelCp<-train(Outcome~.,data=traindata,
                method="rpart",
                tuneLength=20,
                trControl=traincontrol1)
+
+trcontrol2<-trainControl(method="cv",number=5,search="grid")
 modelmd<-train(Outcome~.,data=traindata,
                method="rpart2",
-               trControl=traincontrol1)
+               trControl=trcontrol2)
+modelTunemin<-tune.rpart(Outcome~.,data=traindata,
+                        minsplit=10:15,minbucket = 5:10,
+                        cp=seq(0.0,0.2,by=0.01)
+                         )
+
+modelmd$finalmodel
+premo<-predict(modelmd$finalModel,testdata,type="class")
+precd<-predict(modelCp$finalModel,testdata,type="class")
+preptuning<-predict(modelTunemin$best.model,testdata,type="class")
+
+
+confusionMatrix(premo,testdata$Outcome,mode="prec_recall",positive="1")
+confusionMatrix(precd,testdata$Outcome,mode="prec_recall",positive="1")
+confusionMatrix(preptuning,testdata$Outcome,mode="prec_recall",positive="1")
