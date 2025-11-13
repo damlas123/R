@@ -1,16 +1,41 @@
-data<-read.csv("C:\\Users\\damla\\OneDrive\\Belgeler\\GitHub\\R\\PROJE\\TREES\\data.csv")
+---
+title: "Breast Cancer Wisconsin (Diagnostic)"
+output: html_notebook
+---
+
+In this project, I aim to classify breast cancer tumors as benign or malignant using Decision Tree and Random Forest models.  
+We will analyze the data, clean it, create models, tune hyperparameters, and evaluate the results.
+
+
+Firstly, I import my dataset, check the columns, and remove unnecessary ones.
+
+```{r}
+data <- read.csv("C:\\Users\\damla\\OneDrive\\Belgeler\\GitHub\\R\\PROJE\\TREES\\data.csv")
 View(data)
 names(data)
-data<-data[-c(33)]
+data <- data[-c(33)]
 
-library(caret)
+```
+
+Then, I check if there are any missing values.
+```{r}
 library(mice)
 md.pattern(data)
+```
 
+
+I load the libraries required for building and evaluating decision trees.
+```{r}
+library(caret)
 library(e1071)
 library(rpart)
 library(rattle)
+```
 
+
+Here, I split my dataset into 80% training and 20% testing data.
+Then, I check how many benign and malignant samples I have.
+```{r}
 set.seed(86)
 trainIndex<-sample(1:nrow(data),0.8*nrow(data))
 traindata<-data[trainIndex,]
@@ -21,19 +46,64 @@ testdata$diagnosis<-as.factor(testdata$diagnosis)
 
 table(traindata$diagnosis)
 table(testdata$diagnosis)
+
+```
+
+
+
+Now, I create two decision tree models — one using Information Gain and the other using the Gini Index.
+
+Information Gain measures purity using entropy and chooses splits that give the most information about the target variable.
+
+Gini Index measures how often a randomly chosen element would be incorrectly classified.
+
+Gini is usually faster and works well with large datasets.
+```{r}
 model1<-rpart(diagnosis~.,data=traindata,method="class",
               parms=list(split="information"))
 
 model2<-rpart(diagnosis~.,data=traindata,method="class",
               parms=list(split="gini"))
-summary(model1)
+
+```
+
+
+They are the plot of our model.
+
+```{r}
+
 fancyRpartPlot(model1)
 fancyRpartPlot(model2)
+```
 
+
+I adjust parameters to prevent overfitting and improve performance.
+
+minsplit: Minimum number of observations needed to attempt a split.
+
+cp: Complexity parameter, higher value means a simpler model.
+
+maxdepth: Maximum depth of the tree to control overfitting.
+```{r}
 model1Control<-rpart(diagnosis~.,data=traindata,method="class",
                      parms=list(split="information"),
                     control=rpart.control(minsplit=10,cp=0.01,maxdepth=6))
 
+
+```
+
+
+
+Now, I evaluate all models using confusion matrices.
+
+Accuracy: Overall correctness of the model.
+
+Precision: Correct positive predictions.
+
+Recall (Sensitivity): Ability to detect malignant cases.
+
+F1-Score: Balance between precision and recall.
+```{r}
 
 predict1<-predict(model1,testdata,type="class")
 predict2<-predict(model2,testdata,type="class")
@@ -43,12 +113,21 @@ confusionMatrix(predict1,testdata$diagnosis)
 confusionMatrix(predict2,testdata$diagnosis)
 confusionMatrix(predict3,testdata$diagnosis)
 
+```
 
-#tuning a??amas?? 
 
+This function shows which parameters can be tuned in each algorithm.
 
+rpart allows tuning parameters like cp (complexity).
+rpart2 focuses on maxdepth — maximum tree depth.
+```{r}
 modelLookup("rpart")
 modelLookup("rpart2")
+
+```
+
+I use cross-validation to automatically find the best model configuration.
+```{r}
 
 traincontrol<-trainControl(method="cv",number=5,search="random")
 modelControl<-train(diagnosis~.,data=traindata,
@@ -77,14 +156,43 @@ confusionMatrix(predictmodelControl,data=testdata$diagnosis,mode="prec_recall",p
 
 
 
-#random forest
-install.packages("randomForest")
+```
+
+
+While single Decision Trees are fast, they are prone to overfitting. Therefore, we move to Random Forest, which is an ensemble method. It builds multiple trees on random subsets of the data and features to achieve more stable and accurate predictions.
+
+```{r}
+
+
 library(randomForest)
 modelrandomForest<-randomForest(diagnosis~.,data=traindata,ntree=20)
 modelrandomForest$err.rate
 modelrandomForest$mtry
 varImpPlot(modelrandomForest)
-library(caret)
+```
+ntree: Number of trees in the forest.
+mtry: Number of variables randomly chosen at each split.
+err.rate: Shows model error over the trees.
+varImpPlot(): Displays which features are most important in classification.
+
+
+
+Random Forest generally gives more stable and accurate predictions than a single decision tree because it averages multiple trees and reduces overfitting.
+```{r}
+
+
+predictionrandomf<-predict(modelrandomForest,testdata)
+confusionMatrix(predictionrandomf,testdata$diagnosis)
+confusionMatrix(predictionrandomf,testdata$diagnosis,positive = "M")
+
+```
+
+
+
+Here, I tune Random Forest hyperparameters using random and grid search.
+I also extract classification metrics for further analysis.
+```{r}
+
 modelLookup("rf")
 randomcontrol<-trainControl(method="repeatedcv",number=10,repeats = 3,search="random")
 modelrftune<-train(diagnosis~.,data=traindata,method="rf",
@@ -101,10 +209,14 @@ cm<-confusionMatrix(predictionrandomf,testdata$diagnosis)
 cm$byClass[c("Precision","Recall","F1")]
 
 
+```
+
+
+
+```{r}
 cm_dt <- confusionMatrix(predictmodelTunemin, data = testdata$diagnosis, positive = "B")
 cm_rf <- confusionMatrix(predictrandomgrid, testdata$diagnosis, positive = "B")
 
-# Metrikleri bir veri ??er??evesine toplay??p g??r??nt??leme
 results <- data.frame(
   Model = c("Tuned Decision Tree (rpart)", "Tuned Random Forest (rf)"),
   Accuracy = c(cm_dt$overall['Accuracy'], cm_rf$overall['Accuracy']),
@@ -112,5 +224,8 @@ results <- data.frame(
   Precision = c(cm_dt$byClass['Precision'], cm_rf$byClass['Precision'])
 )
 
-# G??r??nt??leme (Sunumda bu tabloyu g??stereceksiniz)
 print(results)
+```
+Both Decision Tree and Random Forest successfully classified the tumors.
+However, Random Forest achieved higher accuracy and lower error due to its ensemble approach.
+This shows that combining multiple weak learners creates a more powerful and reliable model — especially in medical data where precision is crucial.
