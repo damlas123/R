@@ -1,0 +1,137 @@
+---
+title: "Orange Juice Quality with Neural Network"
+output: html_notebook
+---
+
+Firstly, I make active the necessary libraries:
+
+neuralnet for building the neural network
+
+caret for preprocessing and model evaluation
+
+mice for checking missing data patterns
+
+```{r}
+library(neuralnet)
+library(caret)
+library(mice)
+```
+
+
+
+I load the dataset using the read.csv function and inspect its structure with commands like names() and dim().
+This helps us understand how many features the dataset has and how many observations are available.
+```{r}
+
+data<-read.csv("C:\\Users\\damla\\OneDrive\\Belgeler\\GitHub\\R\\PROJE\\neural networks\\winequality-red.csv")
+View(data)
+names(data)
+dim(data)
+```
+
+
+The md.pattern() function shows if the dataset contains missing values. In this case, we validate that the dataset is complete or identify any missing data structure.
+```{r}
+
+md.pattern(data)
+```
+
+The quality column is converted to a factor using:
+
+```{r}
+
+data$quality<-as.factor(data$quality)
+
+```
+
+Before training neural networks, scaling is important, because neural networks perform better when input features are normalized.
+
+```{r}
+
+datascaled<-preProcess(data,method=c("center","scale"))
+
+```
+
+This centers and scales all numeric variables to ensure fair comparison within the model.
+We divide the data into training and testing sets
+
+```{r}
+modeldatascaled<-predict(datascaled,data)
+set.seed(6)
+trainindex<-sample(1:nrow(modeldatascaled),0.8*nrow(modeldatascaled))
+trainset<-modeldatascaled[trainindex,]
+testset<-modeldatascaled[-trainindex,]
+
+nrow(trainset)
+nrow(testset)
+
+
+
+```
+
+The first model has a single hidden neuron.Sigmoid function.
+
+```{r}
+modelneuralnet1 <- neuralnet(
+  quality ~ .,
+  data = trainset,
+  hidden = 1,
+  threshold = 0.01,
+  act.fct = "logistic",
+  linear.output = FALSE
+)
+
+
+plot(modelneuralnet1)
+```
+
+The second model is deeper:
+
+```{r}
+modelneuralnet2<-neuralnet(quality~.,
+                           data=trainset,
+                           hidden=c(2,2),
+                           threshold=0.04,
+                           act.fct="logistic",
+                           linear.output=FALSE
+)
+plot(modelneuralnet2)
+```
+
+
+We run predictions on the test set for both models.
+Neuralnet outputs probabilities for each class, so we use which.max() to extract the class with the highest probability for each row. Predictions are then converted into factor labels.
+I identify the predicted classes for each row and find the column with the highest probability for each observation.
+
+```{r}
+predictionmodel1 <- predict(modelneuralnet1, testset)
+
+predicted_column_index1 <- apply(predictionmodel1, 1, which.max)
+predicted_labels1 <- levels(testset$quality)[predicted_column_index1]
+
+model1_c <- as.factor(predicted_labels1)
+
+```
+I convert the predicted column index into an actual quality label.
+
+```{r}
+predictionmodel2 <- predict(modelneuralnet2, testset)
+predicted_column_index2 <- apply(predictionmodel2, 1, which.max)
+predicted_labels2 <- levels(testset$quality)[predicted_column_index2]
+model2_c <- as.factor(predicted_labels2)
+
+```
+
+
+```{r}
+
+confusionMatrix(model1_c, testset$quality)
+
+```
+
+```{r}
+confusionMatrix(model2_c, testset$quality)
+
+
+```
+
