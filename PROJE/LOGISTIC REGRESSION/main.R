@@ -38,3 +38,11 @@ summary(modelogic)
 
 anova(modelogic)
 
+#.variable importance
+varImp(modelogic)
+
+predict1<-predict(modelogic,testset,type="response")
+predict1
+
+predict2<-plogis(predict(modelogic,testset))
+
