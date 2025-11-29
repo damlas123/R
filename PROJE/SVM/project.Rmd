@@ -1,13 +1,24 @@
+---
+title: "Breast Cancer Diagnosis with SVM"
+output: html_notebook
+---
+
+
+```{r}
+library(caret)
+library(e1071)
 data<-read.csv("C:\\Users\\damla\\OneDrive\\Belgeler\\GitHub\\R\\PROJE\\SVM\\data.csv")
 View(data)
 data$id<-NULL
 data$X<-NULL
 #varNames<-name(data)
-#data<-data[,which(varNames=='X' | varNames=='id')]
-#bu iki sat??r yukarda null yapt??????m gibi o 2 s??tunu ????kar??r 
-str(data) #s??tunlar??n veri t??r??n?? verir
+#data<-data[,-which(varNames=='X' | varNames=='id')]
+str(data)
+```
 
 
+
+```{r}
 names(data)
 selectedVars<-c( "diagnosis",              
                  "radius_mean",            
@@ -23,9 +34,10 @@ selectedVars<-c( "diagnosis",
 
 modeldataselected<-data[,selectedVars]
 View(modeldataselected)
+```
 
-#g??rselle??tirmeler
 
+```{r}
 plot(modeldataselected$radius_mean,modeldataselected$texture_mean,pch=19,
      col=c('blue','orange')[as.factor(modeldataselected$diagnosis)])
 
@@ -34,15 +46,13 @@ plot(modeldataselected$area_mean,modeldataselected$perimeter_mean,pch=19,
 
 plot(modeldataselected$smoothness_mean,modeldataselected$compactness_mean,pch=19,
      col=c('blue','orange')[as.factor(modeldataselected$diagnosis)])
+```
 
 
-library(e1071)
 
-?svm
+```{r}
 
-###Diagnosis factore ??evirme
 modeldataselected$diagnosis<-as.factor(modeldataselected$diagnosis)
-
 set.seed(8)
 train<-sample(1:nrow(modeldataselected),size=0.8*nrow(modeldataselected))
 trainset<-modeldataselected[train,]
@@ -52,9 +62,11 @@ table(trainset$diagnosis)
 table(testset$diagnosis)
 head(trainset)
 
+```
 
-#model olu??turma 
 
+
+```{r}
 modellinear<-svm(diagnosis~.,data=trainset,
             kernel='linear')
 modelradial<-svm(diagnosis~.,data=trainset,kernel='radial')
@@ -62,11 +74,12 @@ modelradial<-svm(diagnosis~.,data=trainset,kernel='radial')
 modellinear
 modelradial
 
-
-modelradial$coefs#support vekt??rleri oluyor
+modelradial$coefs
 modellinear$coefs
+```
 
 
+```{r}
 predictlinear<-predict(modellinear,testset)
 predictradial<-predict(modelradial,testset)
 confusionlinear<-confusionMatrix(predictlinear,testset$diagnosis)
@@ -74,14 +87,19 @@ confusionradial<-confusionMatrix(predictradial,testset$diagnosis)
 confusionlinear
 confusionradial
 
+```
+
+
+```{r}
 confusionlinear2<-confusionMatrix(predictlinear,testset$diagnosis,positive = 'M')
 confusionradial2<-confusionMatrix(predictradial,testset$diagnosis,positive = 'M')
 
 confusionlinear2
 confusionradial2
+```
 
-#g??rselle??tirme 
 
+```{r}
 
 plot(modellinear,trainset,radius_mean~texture_mean)
 plot(modellinear,testset,perimeter_mean~area_mean)
@@ -89,8 +107,16 @@ plot(modellinear,testset,perimeter_mean~area_mean)
 
 plot(modelradial,trainset,radius_mean~texture_mean)
 plot(modelradial,testset,perimeter_mean~area_mean)
+```
 
-#tuning i??lemi
+Gamma defines how far the influence of a single training point reaches.
+Small gamma → smoother decision boundary
+Large gamma → very flexible boundary that may overfit
+C controls how strictly the SVM tries to classify training samples correctly.
+Large C → narrower margin, risk of overfitting
+Small C → wider margin, risk of underfitting
+
+```{r}
 
 modellineartuning<-tune(svm,diagnosis~.,data=trainset,
                         kernel="linear",
@@ -103,16 +129,20 @@ modelradialtuning<-tune(svm,diagnosis~.,data=trainset,
                         kernel="radial",
                         ranges=list(gamma=2^(-2:2),cost=2^(-4:2)),
                         tunecontrol=tune.control(cross=5))
+```
 
+```{r}
 modellineartuning
 modelradialtuning
-#Yani bunlar e??itilmi?? modelin kendisi de??il, sadece tuning i??leminin sonu??lar??n?? tutan bir obje.
-#Tuned modeli kullanarak tahmin yapabilmen i??in i??indeki en iyi modeli (best.model) ????karman gerekiyor.
 predictlinearcv<-predict(modellineartuning$best.model,testset)
 predictradialcv<-predict(modelradialtuning$best.model,testset)
+```
 
 
+```{r}
 confusionlinearcv<-confusionMatrix(predictlinearcv,testset$diagnosis)
 confusionradialcv<-confusionMatrix(predictradialcv,testset$diagnosis)
 confusionlinearcv
 confusionradialcv
+
+```
